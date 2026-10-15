@@ -1,0 +1,1371 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Калькулятор сметы ремонта (СПб и Ленинградская область)</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com/3.4.17"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+          },
+          colors: {
+            brand: {
+              50: '#f0fdfa',
+              100: '#ccfbf1',
+              500: '#14b8a6',
+              600: '#0d9488',
+              700: '#0f766e',
+              800: '#115e59',
+              900: '#134e4a',
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    @media print {
+      body { background: white !important; color: black !important; font-size: 11pt !important; }
+      .no-print { display: none !important; }
+      .print-only { display: block !important; }
+      .shadow-sm, .shadow-md, .shadow-lg, .shadow-xl { box-shadow: none !important; }
+      .border { border-color: #cbd5e1 !important; }
+      #app-container { max-width: 100% !important; margin: 0 !important; padding: 0 !important; }
+    }
+    .print-only { display: none; }
+    input[type=number]::-webkit-inner-spin-button, 
+    input[type=number]::-webkit-outer-spin-button { 
+      -webkit-appearance: none; 
+      margin: 0; 
+    }
+    input[type=number] {
+      -moz-appearance: textfield;
+    }
+  </style>
+</head>
+<body class="bg-slate-50 text-slate-800 antialiased font-sans min-h-screen flex flex-col">
+
+  <!-- Toast Notification -->
+  <div id="toast" class="fixed bottom-6 right-6 z-50 transform translate-y-24 opacity-0 transition-all duration-300 pointer-events-none bg-slate-900 text-white px-5 py-3.5 rounded-xl shadow-2xl flex items-center gap-3 border border-slate-700 max-w-md">
+    <svg class="w-5 h-5 text-emerald-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+    <span id="toast-message" class="text-sm font-medium">Уведомление</span>
+  </div>
+
+  <!-- Header Banner -->
+  <header class="bg-slate-900 text-white border-b border-slate-800 sticky top-0 z-40 shadow-md">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3.5 flex flex-wrap items-center justify-between gap-4">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-teal-500 to-emerald-400 flex items-center justify-center text-slate-950 font-black text-xl shadow-lg shadow-teal-500/20">
+          ₽
+        </div>
+        <div>
+          <div class="flex items-center gap-2">
+            <h1 class="font-bold text-lg text-white leading-tight">СметаРемонт СПб</h1>
+            <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-teal-500/20 text-teal-300 border border-teal-500/30">
+              СПб и ЛО 2026
+            </span>
+          </div>
+          <p class="text-xs text-slate-400">Калькулятор стоимости ремонта и инженерных сетей по средним ценам региона</p>
+        </div>
+      </div>
+
+      <!-- Quick Total Widget in Header -->
+      <div class="flex items-center gap-4">
+        <div class="text-right hidden sm:block">
+          <div class="text-xs text-slate-400 font-medium">Итого к оплате:</div>
+          <div id="header-grand-total" class="text-xl font-extrabold text-teal-400 leading-none">0 ₽</div>
+        </div>
+        <div class="flex items-center gap-2 no-print">
+          <button id="btn-example" class="px-3 py-1.5 rounded-lg text-xs font-medium bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition flex items-center gap-1.5" title="Загрузить готовый пример расчета 1-к квартиры">
+            <svg class="w-3.5 h-3.5 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+            <span>Пример (1-к кв)</span>
+          </button>
+          <button id="btn-reset-all" class="px-3 py-1.5 rounded-lg text-xs font-medium bg-slate-800 hover:bg-rose-950/60 text-slate-300 hover:text-rose-300 border border-slate-700 hover:border-rose-800 transition flex items-center gap-1.5" title="Сбросить все введенные объемы">
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+            <span>Очистить</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Layout -->
+  <main id="app-container" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 w-full flex-1">
+
+    <!-- Print Title (Only shows when printing) -->
+    <div class="print-only mb-6 border-b pb-4">
+      <div class="flex justify-between items-start">
+        <div>
+          <h1 class="text-2xl font-bold text-slate-900">СМЕТА НА РЕМОНТНО-ОТДЕЛОЧНЫЕ И МОНТАЖНЫЕ РАБОТЫ</h1>
+          <p class="text-sm text-slate-600 mt-1">Регион: Санкт-Петербург и Ленинградская область | Дата формирования: <span id="print-date"></span></p>
+        </div>
+        <div class="text-right">
+          <div class="text-sm font-semibold text-slate-700">ИТОГОВАЯ СУММА:</div>
+          <div id="print-total" class="text-2xl font-bold text-slate-900">0 ₽</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Controls & Filters Bar -->
+    <div class="no-print bg-white rounded-2xl p-4 sm:p-5 shadow-sm border border-slate-200 mb-6 space-y-4">
+      <div class="flex flex-col md:flex-row gap-3 items-stretch md:items-center justify-between">
+        
+        <!-- Search Field -->
+        <div class="relative flex-1 max-w-lg">
+          <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+          </div>
+          <input 
+            type="text" 
+            id="search-input" 
+            placeholder="Поиск по работам (покраска, откосы, щит, УЗО, проводка, стяжка...)" 
+            class="w-full pl-10 pr-9 py-2 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition placeholder:text-slate-400"
+          >
+          <button id="btn-clear-search" class="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-600 hidden">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+          </button>
+        </div>
+
+        <!-- Filter toggles & custom item button -->
+        <div class="flex flex-wrap items-center gap-2">
+          <label class="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl border border-slate-200 bg-slate-50 hover:bg-slate-100 cursor-pointer text-xs font-medium text-slate-700 select-none transition">
+            <input type="checkbox" id="filter-selected-only" class="rounded border-slate-300 text-teal-600 focus:ring-teal-500">
+            <span>Только выбранные (<span id="selected-count-badge">0</span>)</span>
+          </label>
+
+          <button id="btn-open-custom-modal" class="px-3.5 py-1.5 rounded-xl text-xs font-semibold bg-teal-50 text-teal-700 hover:bg-teal-100 border border-teal-200/80 transition flex items-center gap-1.5 shadow-xs">
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+            <span>Добавить свою работу</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Categories Tabs -->
+      <div class="flex items-center gap-1.5 overflow-x-auto pb-1 text-xs font-medium scrollbar-none" id="category-pills">
+        <!-- Rendered dynamically -->
+      </div>
+    </div>
+
+    <!-- Main Grid: Items List + Sidebar Summary -->
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+      
+      <!-- Left Column: Work Items List (8 cols on large) -->
+      <div class="lg:col-span-8 space-y-4">
+        
+        <!-- Table/Card Header with items counter -->
+        <div class="flex items-center justify-between px-1">
+          <div class="text-xs font-semibold text-slate-500 uppercase tracking-wider">
+            Найдено видов работ: <span id="visible-items-count" class="text-slate-800 font-bold">0</span>
+          </div>
+          <div class="text-xs text-slate-400">
+            Все цены указаны в рублях (₽)
+          </div>
+        </div>
+
+        <!-- Container for cards/list -->
+        <div id="works-list-container" class="space-y-3">
+          <!-- Dynamic cards inserted here -->
+        </div>
+
+        <!-- Empty state when no matches -->
+        <div id="empty-state" class="hidden bg-white rounded-2xl p-12 text-center border border-slate-200">
+          <div class="w-12 h-12 mx-auto rounded-full bg-slate-100 flex items-center justify-center text-slate-400 mb-3">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+          </div>
+          <h3 class="text-base font-semibold text-slate-800">Работы не найдены</h3>
+          <p class="text-xs text-slate-500 mt-1 max-w-sm mx-auto">Попробуйте изменить поисковый запрос или сбросить фильтр по категории.</p>
+          <button id="btn-reset-filters" class="mt-4 px-4 py-2 text-xs font-medium text-teal-700 bg-teal-50 rounded-xl hover:bg-teal-100 transition">
+            Сбросить фильтры
+          </button>
+        </div>
+      </div>
+
+      <!-- Right Column: Live Summary & Actions (4 cols on large) -->
+      <div class="lg:col-span-4 space-y-4 sticky top-20 no-print">
+        
+        <!-- Summary Card -->
+        <div class="bg-white rounded-2xl p-5 shadow-sm border border-slate-200">
+          <h2 class="text-base font-bold text-slate-900 mb-4 flex items-center justify-between">
+            <span>Сводка сметы</span>
+            <span id="badge-total-items" class="text-xs px-2 py-0.5 rounded-full bg-teal-50 text-teal-700 font-semibold border border-teal-200">0 позиций</span>
+          </h2>
+
+          <!-- Category Breakdown List -->
+          <div id="summary-breakdown" class="space-y-2 mb-5 text-xs text-slate-600 border-b border-slate-100 pb-4">
+            <!-- Dynamic breakdown rows -->
+          </div>
+
+          <!-- Regional & Volume Coefficient -->
+          <div class="space-y-3 mb-5 bg-slate-50 p-3.5 rounded-xl border border-slate-100">
+            <div class="text-xs font-semibold text-slate-700">Коэффициенты и локация:</div>
+            
+            <div>
+              <label for="region-select" class="block text-[11px] text-slate-500 mb-1">Расположение объекта:</label>
+              <select id="region-select" class="w-full text-xs bg-white border border-slate-200 rounded-lg p-2 focus:ring-1 focus:ring-teal-500 focus:outline-none">
+                <option value="1.0">Санкт-Петербург (в черте КАД)</option>
+                <option value="1.10">Ленинградская область (до 30 км от КАД) (+10%)</option>
+                <option value="1.20">Ленинградская область (более 30 км от КАД) (+20%)</option>
+              </select>
+            </div>
+
+            <div>
+              <label for="discount-select" class="block text-[11px] text-slate-500 mb-1">Скидка / наценка на объем:</label>
+              <select id="discount-select" class="w-full text-xs bg-white border border-slate-200 rounded-lg p-2 focus:ring-1 focus:ring-teal-500 focus:outline-none">
+                <option value="0">Без скидки (базовая стоимость)</option>
+                <option value="5">Скидка 5% (объем от 80 м²)</option>
+                <option value="10">Скидка 10% (комплексный ремонт под ключ)</option>
+                <option value="-10">Срочность / стесненные условия (+10%)</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Total Calculation -->
+          <div class="space-y-2 mb-5">
+            <div class="flex justify-between text-xs text-slate-500">
+              <span>Сумма по работам:</span>
+              <span id="subtotal-amount" class="font-medium text-slate-700">0 ₽</span>
+            </div>
+            <div id="adjustment-row" class="flex justify-between text-xs text-teal-600 hidden">
+              <span id="adjustment-label">Корректировка:</span>
+              <span id="adjustment-amount" class="font-medium">0 ₽</span>
+            </div>
+            <div class="pt-2 border-t border-slate-200 flex justify-between items-baseline">
+              <span class="text-sm font-bold text-slate-900">ИТОГО:</span>
+              <span id="grand-total-amount" class="text-2xl font-black text-slate-900 text-teal-600">0 ₽</span>
+            </div>
+          </div>
+
+          <!-- Export & Action Buttons -->
+          <div class="space-y-2">
+            <button id="btn-print-estimate" class="w-full py-2.5 px-4 rounded-xl text-xs font-semibold bg-slate-900 text-white hover:bg-slate-800 transition shadow-sm flex items-center justify-center gap-2">
+              <svg class="w-4 h-4 text-teal-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/></svg>
+              <span>Печать / Сохранить в PDF</span>
+            </button>
+
+            <button id="btn-export-csv" class="w-full py-2.5 px-4 rounded-xl text-xs font-semibold bg-emerald-50 text-emerald-800 hover:bg-emerald-100 border border-emerald-200 transition flex items-center justify-center gap-2">
+              <svg class="w-4 h-4 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+              <span>Скачать смету в Excel (.CSV)</span>
+            </button>
+
+            <button id="btn-copy-summary" class="w-full py-2 px-4 rounded-xl text-xs font-medium bg-slate-100 text-slate-700 hover:bg-slate-200 transition flex items-center justify-center gap-2">
+              <svg class="w-4 h-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3"/></svg>
+              <span>Скопировать текст сметы</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Information Note -->
+        <div class="bg-amber-50 rounded-2xl p-4 border border-amber-200 text-xs text-amber-900 leading-relaxed">
+          <div class="font-bold flex items-center gap-1.5 mb-1 text-amber-950">
+            <svg class="w-4 h-4 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+            <span>О расценках СПб и ЛО:</span>
+          </div>
+          Расценки сформированы на основе анализа прайс-листов ведущих строительных компаний и частных мастеров Санкт-Петербурга. Вы можете менять стоимость единицы работы вручную, нажимая на цену позиции.
+        </div>
+
+        <!-- Сноска: Справочник по современным натяжным потолкам -->
+        <div class="bg-gradient-to-br from-teal-900 to-slate-900 rounded-2xl p-4.5 text-white shadow-sm border border-teal-800/50 space-y-3">
+          <div class="flex items-center justify-between">
+            <div class="font-bold text-xs text-teal-300 flex items-center gap-1.5 uppercase tracking-wider">
+              <span>✨</span> Сноска: Натяжные потолки
+            </div>
+            <span class="text-[10px] px-2 py-0.5 rounded bg-teal-500/20 text-teal-300 border border-teal-500/30 font-medium">Тренды 2026</span>
+          </div>
+          
+          <p class="text-[11px] text-slate-300 leading-relaxed">
+            Современные потолочные системы в СПб практически вытеснили устаревшие решения со вставкой-заглушкой:
+          </p>
+
+          <div class="space-y-2 text-[11px] divide-y divide-slate-800">
+            <div class="pt-1.5 first:pt-0">
+              <span class="font-semibold text-teal-200">Теневой профиль (EuroKRAAB):</span>
+              <p class="text-slate-300 text-[10px] mt-0.5">Создает ровный теневой зазор 6-7 мм между стеной и потолком. Исключает резиновую вставку и выглядит как премиальный подвесной ГКЛ-потолок (~1 350 ₽/м.п.).</p>
+            </div>
+            <div class="pt-1.5">
+              <span class="font-semibold text-teal-200">Световые линии (Slott / Flexy):</span>
+              <p class="text-slate-300 text-[10px] mt-0.5">Встраиваемые профили шириной 15, 30 или 50 мм в уровень с полотном. Служат основным или декоративным светом (~2 500 ₽/м.п. + лента).</p>
+            </div>
+            <div class="pt-1.5">
+              <span class="font-semibold text-teal-200">Встроенные треки (магнитные 48V):</span>
+              <p class="text-slate-300 text-[10px] mt-0.5">Ниши Slott/LumFer заподлицо с полотном, куда монтируется шинопровод. Светильники легко перемещаются и поворачиваются (~2 500 ₽/м.п. ниша + 1 100 ₽ шина).</p>
+            </div>
+            <div class="pt-1.5">
+              <span class="font-semibold text-teal-200">Скрытые карнизы (ПК-5 / ПК-15):</span>
+              <p class="text-slate-300 text-[10px] mt-0.5">Алюминиевые профили с направляющими для штор и пазом под LED-подсветку. Шторы ниспадают «прямо из потолка» (~2 500 ₽/м.п.).</p>
+            </div>
+            <div class="pt-1.5">
+              <span class="font-semibold text-teal-200">Теневые и магнитные вентрешетки:</span>
+              <p class="text-slate-300 text-[10px] mt-0.5">Вентдиффузоры Hasky/Kraab с теневым зазором или съемной панелью на магнитах (~2 600 - 2 900 ₽/шт) вместо торчащего пластика.</p>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+    </div>
+
+    <!-- Print Only Table Section -->
+    <div class="print-only mt-6">
+      <table class="w-full text-left border-collapse">
+        <thead>
+          <tr class="border-b-2 border-slate-900 text-xs font-bold uppercase text-slate-700">
+            <th class="py-2">№</th>
+            <th class="py-2">Категория</th>
+            <th class="py-2">Наименование работ</th>
+            <th class="py-2 text-center">Ед. изм.</th>
+            <th class="py-2 text-right">Цена (₽)</th>
+            <th class="py-2 text-center">Кол-во</th>
+            <th class="py-2 text-right">Сумма (₽)</th>
+          </tr>
+        </thead>
+        <tbody id="print-table-body" class="text-xs divide-y divide-slate-200">
+          <!-- Filled on print -->
+        </tbody>
+      </table>
+
+      <div class="mt-8 pt-4 border-t border-slate-300 text-xs text-slate-500 flex justify-between">
+        <div>Заказчик: __________________ / __________________</div>
+        <div>Исполнитель: __________________ / __________________</div>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- Modal: Add Custom Work -->
+  <div id="custom-modal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs hidden no-print">
+    <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-200">
+      <div class="flex items-center justify-between mb-4">
+        <h3 class="text-base font-bold text-slate-900">Добавить свою работу</h3>
+        <button id="btn-close-modal" class="text-slate-400 hover:text-slate-600 p-1">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+        </button>
+      </div>
+
+      <form id="custom-work-form" class="space-y-4">
+        <div>
+          <label for="custom-name" class="block text-xs font-medium text-slate-700 mb-1">Наименование работы *</label>
+          <input type="text" id="custom-name" required placeholder="Например: Монтаж декоративных реек" class="w-full text-xs px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-teal-500 focus:outline-none">
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label for="custom-category" class="block text-xs font-medium text-slate-700 mb-1">Категория</label>
+            <select id="custom-category" class="w-full text-xs px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-teal-500 focus:outline-none">
+              <option value="walls">🧱 Стены</option>
+              <option value="ceilings">🏢 Потолки (ГКЛ / малярка)</option>
+              <option value="stretch">✨ Натяжные потолки (дизайн)</option>
+              <option value="openings">🪟 Откосы / двери</option>
+              <option value="floors">🪵 Полы</option>
+              <option value="electric">⚡ Электрика</option>
+              <option value="plumbing">🚿 Сантехника</option>
+              <option value="demo">🔨 Демонтаж</option>
+              <option value="custom">➕ Другие работы</option>
+            </select>
+          </div>
+
+          <div>
+            <label for="custom-unit" class="block text-xs font-medium text-slate-700 mb-1">Ед. изм.</label>
+            <select id="custom-unit" class="w-full text-xs px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-teal-500 focus:outline-none">
+              <option value="м²">м²</option>
+              <option value="пог. м">пог. м</option>
+              <option value="шт.">шт.</option>
+              <option value="точка">точка</option>
+              <option value="компл.">компл.</option>
+              <option value="м³">м³</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label for="custom-price" class="block text-xs font-medium text-slate-700 mb-1">Цена за единицу (₽) *</label>
+            <input type="number" id="custom-price" required min="0" placeholder="1000" class="w-full text-xs px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-teal-500 focus:outline-none">
+          </div>
+
+          <div>
+            <label for="custom-qty" class="block text-xs font-medium text-slate-700 mb-1">Количество</label>
+            <input type="number" id="custom-qty" min="0" step="any" value="1" class="w-full text-xs px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-teal-500 focus:outline-none">
+          </div>
+        </div>
+
+        <div>
+          <label for="custom-desc" class="block text-xs font-medium text-slate-700 mb-1">Примечание (необязательно)</label>
+          <input type="text" id="custom-desc" placeholder="Особые условия, материал..." class="w-full text-xs px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-teal-500 focus:outline-none">
+        </div>
+
+        <div class="flex justify-end gap-2 pt-2">
+          <button type="button" id="btn-cancel-modal" class="px-4 py-2 text-xs font-medium text-slate-600 hover:bg-slate-100 rounded-xl transition">
+            Отмена
+          </button>
+          <button type="submit" class="px-5 py-2 text-xs font-semibold text-white bg-teal-600 hover:bg-teal-700 rounded-xl transition shadow-xs">
+            Сохранить в смету
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <footer class="no-print bg-slate-900 border-t border-slate-800 text-slate-400 text-xs py-5 mt-auto">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-3 text-center sm:text-left">
+      <div>
+        <p class="font-medium text-slate-300">Калькулятор сметы отделочных и электромонтажных работ</p>
+        <p class="text-[11px] text-slate-500 mt-0.5">Санкт-Петербург и Ленинградская область • Цены актуализированы на 2026 год</p>
+      </div>
+      <div class="text-[11px] text-slate-500">
+        Для профессиональных строителей, мастеров и заказчиков ремонта
+      </div>
+    </div>
+  </footer>
+
+  <!-- Application Logic -->
+  <script>
+// Categories configuration
+const CATEGORIES = {
+  all: { label: 'Все работы', icon: '📋' },
+  walls: { label: 'Стены', icon: '🧱' },
+  ceilings: { label: 'Потолки (ГКЛ / малярка)', icon: '🏢' },
+  stretch: { label: 'Натяжные потолки (дизайн)', icon: '✨' },
+  openings: { label: 'Откосы и двери', icon: '🪟' },
+  floors: { label: 'Полы', icon: '🪵' },
+  electric: { label: 'Электрика', icon: '⚡' },
+  plumbing: { label: 'Сантехника', icon: '🚿' },
+  demo: { label: 'Демонтаж', icon: '🔨' },
+  custom: { label: 'Свои работы', icon: '➕' }
+};
+
+// Database of typical regional works & average market prices in Saint Petersburg & LO
+const DEFAULT_SERVICES = [
+  // 1. СТЕНЫ
+  { id: 'w1', cat: 'walls', name: 'Грунтовка стен (в 1 слой)', desc: 'Обеспыливание и укрепление основания перед штукатуркой или шпаклевкой', unit: 'м²', price: 120, defaultPrice: 120, qty: 0 },
+  { id: 'w2', cat: 'walls', name: 'Оштукатуривание стен по маякам (до 30 мм)', desc: 'Выравнивание геометрии стен по лазерному уровню', unit: 'м²', price: 950, defaultPrice: 950, qty: 0 },
+  { id: 'w3', cat: 'walls', name: 'Монтаж малярной / армирующей сетки', desc: 'Защита штукатурки и стыков от образования трещин', unit: 'м²', price: 220, defaultPrice: 220, qty: 0 },
+  { id: 'w4', cat: 'walls', name: 'Шпаклевка стен под обои (2 слоя)', desc: 'Базовое выравнивание под поклейку плотных обоев', unit: 'м²', price: 650, defaultPrice: 650, qty: 0 },
+  { id: 'w5', cat: 'walls', name: 'Шпаклевка стен под покраску финишная (2 слоя)', desc: 'Идеальное мелкозернистое выравнивание поверхности пастой', unit: 'м²', price: 1100, defaultPrice: 1100, qty: 0 },
+  { id: 'w6', cat: 'walls', name: 'Ошкуривание и шлифовка стен под покраску', desc: 'Абразивная зачистка стен с контрольным боковым светом', unit: 'м²', price: 220, defaultPrice: 220, qty: 0 },
+  { id: 'w7', cat: 'walls', name: 'Поклейка стеклохолста («паутинка»)', desc: 'Сплошное армирование стен перед финишной шпаклевкой и покраской', unit: 'м²', price: 480, defaultPrice: 480, qty: 0 },
+  { id: 'w8', cat: 'walls', name: 'Покраска стен в 1 слой', desc: 'Окрашивание валиком или краскопультом в один проход', unit: 'м²', price: 400, defaultPrice: 400, qty: 0 },
+  { id: 'w9', cat: 'walls', name: 'Покраска стен в 2 слоя', desc: 'Качественная равномерная двухслойная окраска интерьерной краской', unit: 'м²', price: 700, defaultPrice: 700, qty: 0 },
+  { id: 'w10', cat: 'walls', name: 'Поклейка флизелиновых / виниловых обоев', desc: 'Поклейка обоев без сложной подгонки рисунка (рулон 1.06 м)', unit: 'м²', price: 600, defaultPrice: 600, qty: 0 },
+  { id: 'w11', cat: 'walls', name: 'Поклейка обоев с подгонкой рисунка', desc: 'Точная стыковка раппорта рисунка полотен', unit: 'м²', price: 750, defaultPrice: 750, qty: 0 },
+  { id: 'w12', cat: 'walls', name: 'Возведение перегородок из газобетона / пазогребня', desc: 'Кладка межкомнатных перегородок толщиной до 100 мм на клей', unit: 'м²', price: 1400, defaultPrice: 1400, qty: 0 },
+  { id: 'w13', cat: 'walls', name: 'Монтаж перегородок из ГКЛ в 2 слоя со звукоизоляцией', desc: 'Металлический каркас, минеральная вата, двойной гипсокартон с двух сторон', unit: 'м²', price: 1800, defaultPrice: 1800, qty: 0 },
+
+  // 2. ПОТОЛКИ
+  { id: 'c1', cat: 'ceilings', name: 'Грунтовка потолка (в 1 слой)', desc: 'Подготовка потолочного перекрытия глубокопроникающей грунтовкой', unit: 'м²', price: 140, defaultPrice: 140, qty: 0 },
+  { id: 'c2', cat: 'ceilings', name: 'Штукатурка потолка по маякам', desc: 'Выравнивание перепадов монолитных или сборных плит перекрытия', unit: 'м²', price: 1650, defaultPrice: 1650, qty: 0 },
+  { id: 'c3', cat: 'ceilings', name: 'Шпаклевка потолка под покраску (в 2 слоя)', desc: 'Базовое и финишное шпаклевание потолка полимерной шпаклевкой', unit: 'м²', price: 950, defaultPrice: 950, qty: 0 },
+  { id: 'c4', cat: 'ceilings', name: 'Покраска потолка в 1 слой', desc: 'Окраска матовой потолочной краской в один проход', unit: 'м²', price: 550, defaultPrice: 550, qty: 0 },
+  { id: 'c5', cat: 'ceilings', name: 'Покраска потолка в 2 слоя', desc: 'Классическое двухслойное нанесение потолочной белой или колерованной краски', unit: 'м²', price: 980, defaultPrice: 980, qty: 0 },
+  { id: 'c6', cat: 'ceilings', name: 'Монтаж подвесного потолка из ГКЛ в 1 уровень', desc: 'Устройство одноуровневого потолка из ГКЛ на металлическом каркасе Кнауф', unit: 'м²', price: 1750, defaultPrice: 1750, qty: 0 },
+  { id: 'c7', cat: 'ceilings', name: 'Монтаж натяжного потолка (полотно + работа)', desc: 'Бесшовное матовое или сатиновое полотно с установкой багета под ключ', unit: 'м²', price: 850, defaultPrice: 850, qty: 0 },
+  { id: 'c8', cat: 'ceilings', name: 'Монтаж потолочного плинтуса (галтели)', desc: 'Запил углов и приклеивание полистирольного или дюрополимерного плинтуса', unit: 'пог. м', price: 350, defaultPrice: 350, qty: 0 },
+  { id: 'c9', cat: 'ceilings', name: 'Покраска потолочного плинтуса с заделкой стыков', desc: 'Шпаклевание примыканий и аккуратное окрашивание кистью/валиком', unit: 'пог. м', price: 350, defaultPrice: 350, qty: 0 },
+
+
+  // 2.1. НАТЯЖНЫЕ ПОТОЛКИ (СОВРЕМЕННЫЕ И ДИЗАЙНЕРСКИЕ СИСТЕМЫ)
+  { id: 'st1', cat: 'stretch', name: 'Полотно ПВХ MSD Premium / Bauf (матовый, сатин, глянец)', desc: 'Бесшовное полотно шириной до 5.5 м с гарпунным раскроем и монтажом', unit: 'м²', price: 550, defaultPrice: 550, qty: 0 },
+  { id: 'st2', cat: 'stretch', name: 'Полотно негорючее экологичное Teqtum Euro (класс КМ2)', desc: 'Сертифицированное полотно без запаха для детских комнат и спален', unit: 'м²', price: 950, defaultPrice: 950, qty: 0 },
+  { id: 'st3', cat: 'stretch', name: 'Тканевое бесшовное полотно Descor / Clipso (Германия/Франция)', desc: 'Премиальное «дышащее» матовое полотно с холодным монтажом без газовой пушки', unit: 'м²', price: 2200, defaultPrice: 2200, qty: 0 },
+  { id: 'st4', cat: 'stretch', name: 'Теневой профиль EuroKRAAB (черный алюминий, зазор 6-7 мм)', desc: 'Идеальный ровный теневой зазор по периметру стены без пластиковой ленты/заглушки', unit: 'пог. м', price: 1350, defaultPrice: 1350, qty: 0 },
+  { id: 'st5', cat: 'stretch', name: 'Бесщелевой профиль KRAAB 4.0 / Шток', desc: 'Монтаж натяжного полотна вплотную к идеально ровной стене без малейшего зазора', unit: 'пог. м', price: 1550, defaultPrice: 1550, qty: 0 },
+  { id: 'st6', cat: 'stretch', name: 'Парящий профиль с контурной подсветкой', desc: 'Алюминиевый профиль с нишей под LED-ленту, создающий эффект парящего потолка', unit: 'пог. м', price: 1100, defaultPrice: 1100, qty: 0 },
+  { id: 'st7', cat: 'stretch', name: 'Световая линия Slott 15 / 30 / Flexy (монтаж профиля)', desc: 'Врезка профиля световой линии в уровень с полотном потолка с рассеивателем', unit: 'пог. м', price: 2500, defaultPrice: 2500, qty: 0 },
+  { id: 'st8', cat: 'stretch', name: 'Монтаж светодиодной ленты высокой плотности (24V)', desc: 'Прокладка премиальной диодной ленты в световую линию без точек свечения', unit: 'пог. м', price: 750, defaultPrice: 750, qty: 0 },
+  { id: 'st9', cat: 'stretch', name: 'Оформление открытого угла / торца световой линии', desc: 'Запил под углом 90° и фабричная спайка рассеивателя световой линии', unit: 'шт.', price: 1400, defaultPrice: 1400, qty: 0 },
+  { id: 'st10', cat: 'stretch', name: 'Пересечение световых линий (крестообразное или Т-образное)', desc: 'Точная стыковка и коммутация пересекающихся световых линий под 90°', unit: 'узел', price: 2100, defaultPrice: 2100, qty: 0 },
+  { id: 'st11', cat: 'stretch', name: 'Встроенная ниша под трек Slott / LumFer / Novotech', desc: 'Монтаж демпферной ниши в полотно для последующей установки шинопровода', unit: 'пог. м', price: 2500, defaultPrice: 2500, qty: 0 },
+  { id: 'st12', cat: 'stretch', name: 'Монтаж магнитного трека (шинопровода 48V)', desc: 'Установка низковольтного магнитного трека в нишу с подключением питания', unit: 'пог. м', price: 1100, defaultPrice: 1100, qty: 0 },
+  { id: 'st13', cat: 'stretch', name: 'Установка трекового светильника в шинопровод', desc: 'Установка и фиксация магнитного или механического спота в трековую шину', unit: 'шт.', price: 400, defaultPrice: 400, qty: 0 },
+  { id: 'st14', cat: 'stretch', name: 'Скрытый карниз для штор ПК-5 / ПК-15 (алюминиевая гардина)', desc: 'Встроенный 2-3 рядный карниз с перегибом полотна и пазом под LED-подсветку', unit: 'пог. м', price: 2500, defaultPrice: 2500, qty: 0 },
+  { id: 'st15', cat: 'stretch', name: 'Формирование скрытой ниши под карниз с перегибом полотна', desc: 'Ниша из бруса с отбойником или профиля БП40 до бетонного перекрытия', unit: 'пог. м', price: 1900, defaultPrice: 1900, qty: 0 },
+  { id: 'st16', cat: 'stretch', name: 'Скрытый электрокарниз Slott Motion / Somfy в потолок', desc: 'Интегрированный в потолок профиль для моторизованных раздвижных штор', unit: 'пог. м', price: 4100, defaultPrice: 4100, qty: 0 },
+  { id: 'st17', cat: 'stretch', name: 'LED-подсветка карнизной ниши со светорассеивателем', desc: 'Мягкий струящийся свет на шторы с выводом провода к выключателю', unit: 'пог. м', price: 1000, defaultPrice: 1000, qty: 0 },
+  { id: 'st18', cat: 'stretch', name: 'Теневая вентиляционная решетка (Hasky / Kraab с зазором 7 мм)', desc: 'Скрытый монтаж решетки вентиляции заподлицо с натяжным полотном', unit: 'шт.', price: 2600, defaultPrice: 2600, qty: 0 },
+  { id: 'st19', cat: 'stretch', name: 'Магнитная вентиляционная решетка (съемная лицевая панель)', desc: 'Решетка на скрытых магнитах для быстрой ревизии и чистки вентканала', unit: 'шт.', price: 2900, defaultPrice: 2900, qty: 0 },
+  { id: 'st20', cat: 'stretch', name: 'Щелевой диффузор скрытого монтажа (Airslot / Студия-J)', desc: 'Линейный безрамочный диффузор для приточно-вытяжной вентиляции / кондиционера', unit: 'пог. м', price: 3600, defaultPrice: 3600, qty: 0 },
+  { id: 'st21', cat: 'stretch', name: 'Круглая решетка / диффузор с термокольцом (D100–125 мм)', desc: 'Классическая вытяжная решетка с протекторным армирующим кольцом', unit: 'шт.', price: 950, defaultPrice: 950, qty: 0 },
+  { id: 'st22', cat: 'stretch', name: 'Монтаж блока питания (трансформатора 24V) в скрытую зону', desc: 'Установка блока питания для подсветки, световых линий или треков в щит/люк', unit: 'шт.', price: 1500, defaultPrice: 1500, qty: 0 },
+  { id: 'st23', cat: 'stretch', name: 'Закладная платформа под точечный светильник с термокольцом', desc: 'Универсальная стойка на подвесах под точечный светильник GX53 / MR16', unit: 'шт.', price: 550, defaultPrice: 550, qty: 0 },
+  { id: 'st24', cat: 'stretch', name: 'Закладная платформа под люстру / подвесной светильник', desc: 'Усиленная платформа с крестовиной или крюком под тяжелый светильник', unit: 'шт.', price: 800, defaultPrice: 800, qty: 0 },
+  { id: 'st25', cat: 'stretch', name: 'Обход трубы отопления / газовой трубы через полотно', desc: 'Внутреннее пластиковое кольцо-обвод с надежной герметизацией шва', unit: 'шт.', price: 500, defaultPrice: 500, qty: 0 },
+  { id: 'st26', cat: 'stretch', name: 'Дополнительный угол помещения (свыше 4 стандартных)', desc: 'Запил профиля и сложный раскрой полотна для эркеров и ниш', unit: 'шт.', price: 300, defaultPrice: 300, qty: 0 },
+
+  // 4. ОТКОСЫ, ОКНА И ДВЕРИ
+  { id: 'o1', cat: 'openings', name: 'Установка пластиковых откосов (сэндвич-панели)', desc: 'Теплые сэндвич-панели до 40 см, монтаж F-профиля и герметизация жидким пластиком', unit: 'пог. м', price: 850, defaultPrice: 850, qty: 0 },
+  { id: 'o2', cat: 'openings', name: 'Штукатурка оконных / дверных откосов по маякам', desc: 'Формирование четкого геометрического угла и плоскости откоса', unit: 'пог. м', price: 700, defaultPrice: 700, qty: 0 },
+  { id: 'o3', cat: 'openings', name: 'Шпаклевка откосов под покраску (в 2 слоя)', desc: 'Выравнивание откосов финишной шпаклевкой с шлифовкой', unit: 'пог. м', price: 550, defaultPrice: 550, qty: 0 },
+  { id: 'o4', cat: 'openings', name: 'Покраска откосов в 1 слой', desc: 'Нанесение влагостойкой моющейся краски на подготовленный откос', unit: 'пог. м', price: 250, defaultPrice: 250, qty: 0 },
+  { id: 'o5', cat: 'openings', name: 'Покраска откосов в 2 слоя', desc: 'Равномерная двухслойная покраска откосов с защитой оконной рамы', unit: 'пог. м', price: 450, defaultPrice: 450, qty: 0 },
+  { id: 'o6', cat: 'openings', name: 'Комплексная отделка откосов (штукатурка + шпаклевка + покраска)', desc: 'Полный цикл работ по штукатурному откосу «под ключ»', unit: 'пог. м', price: 1700, defaultPrice: 1700, qty: 0 },
+  { id: 'o7', cat: 'openings', name: 'Монтаж подоконника (ПВХ)', desc: 'Подрезка по размеру, установка по уровню и запенивание монтажной пеной', unit: 'пог. м', price: 800, defaultPrice: 800, qty: 0 },
+  { id: 'o8', cat: 'openings', name: 'Монтаж межкомнатной двери под ключ', desc: 'Сборка дверного блока, врезка скрытых/накладных петель, замка, установка доборов', unit: 'шт.', price: 4500, defaultPrice: 4500, qty: 0 },
+  { id: 'o9', cat: 'openings', name: 'Установка комплекта наличников дверного проема', desc: 'Запил наличников под 45° или 90° и аккуратная фиксация на шпильки/герметик', unit: 'компл.', price: 900, defaultPrice: 900, qty: 0 },
+
+  // 4. ПОЛЫ
+  { id: 'f1', cat: 'floors', name: 'Грунтовка пола (в 1 слой)', desc: 'Обеспыливание плиты перекрытия перед стяжкой или ровнителем', unit: 'м²', price: 120, defaultPrice: 120, qty: 0 },
+  { id: 'f2', cat: 'floors', name: 'Устройство цементно-песчаной стяжки (до 50 мм)', desc: 'Укладка демпферной ленты, установка маяков, заливка и затирка стяжки', unit: 'м²', price: 980, defaultPrice: 980, qty: 0 },
+  { id: 'f3', cat: 'floors', name: 'Заливка самовыравнивающегося наливного пола (до 10 мм)', desc: 'Финишное обеспыленное выравнивание игольчатым валиком', unit: 'м²', price: 680, defaultPrice: 680, qty: 0 },
+  { id: 'f4', cat: 'floors', name: 'Настил подложки под напольные покрытия', desc: 'Укладка экструдированного полистирола, пробки или хвои с проклейкой швов', unit: 'м²', price: 120, defaultPrice: 120, qty: 0 },
+  { id: 'f5', cat: 'floors', name: 'Укладка ламината (прямая укладка)', desc: 'Замковая сборка ламината 32–33 класса с технологическими зазорами', unit: 'м²', price: 650, defaultPrice: 650, qty: 0 },
+  { id: 'f6', cat: 'floors', name: 'Укладка ламината по диагонали (под 45°)', desc: 'Диагональная настилка с фигурной подрезкой у стен', unit: 'м²', price: 950, defaultPrice: 950, qty: 0 },
+  { id: 'f7', cat: 'floors', name: 'Укладка кварцвинила / SPC (замковый)', desc: 'Монтаж каменно-полимерной плитки повышенной износостойкости', unit: 'м²', price: 800, defaultPrice: 800, qty: 0 },
+  { id: 'f8', cat: 'floors', name: 'Укладка кварцвинила клеевого (LVT)', desc: 'Приклеивание виниловых плиток на специальный дисперсионный клей', unit: 'м²', price: 1100, defaultPrice: 1100, qty: 0 },
+  { id: 'f9', cat: 'floors', name: 'Укладка напольной плитки / керамогранита (до 60х60)', desc: 'Монтаж плитки на усиленный плиточный клей с применением СВП', unit: 'м²', price: 1850, defaultPrice: 1850, qty: 0 },
+  { id: 'f10', cat: 'floors', name: 'Укладка крупноформатного керамогранита (120х60)', desc: 'Монтаж плитки большого формата с двойным нанесением клея', unit: 'м²', price: 2600, defaultPrice: 2600, qty: 0 },
+  { id: 'f11', cat: 'floors', name: 'Затирка межплиточных швов цементная', desc: 'Заполнение швов эластичной водоотталкивающей цементной затиркой', unit: 'м²', price: 300, defaultPrice: 300, qty: 0 },
+  { id: 'f12', cat: 'floors', name: 'Затирка межплиточных швов эпоксидная', desc: 'Заполнение двухкомпонентной химически стойкой эпоксидной пастой', unit: 'м²', price: 850, defaultPrice: 850, qty: 0 },
+  { id: 'f13', cat: 'floors', name: 'Монтаж напольного пластикового плинтуса', desc: 'Крепление плинтуса дюбель-гвоздями с кабель-каналом и фурнитурой', unit: 'пог. м', price: 250, defaultPrice: 250, qty: 0 },
+  { id: 'f14', cat: 'floors', name: 'Монтаж плинтуса из МДФ / дюрополимера / скрытого', desc: 'Торцевой распил под 45° на торцовочной пиле, монтаж на жидкие гвозди', unit: 'пог. м', price: 500, defaultPrice: 500, qty: 0 },
+
+  // 5. ЭЛЕКТРОМОНТАЖНЫЕ РАБОТЫ
+  { id: 'e1', cat: 'electric', name: 'Штробление стен под кабель (газобетон / кирпич)', desc: 'Прорезка штробы 20х20 мм штроборезом с промышленным пылесосом', unit: 'пог. м', price: 320, defaultPrice: 320, qty: 0 },
+  { id: 'e2', cat: 'electric', name: 'Штробление стен под кабель (бетон / монолит)', desc: 'Штробление тяжелого армированного бетона без пыли', unit: 'пог. м', price: 480, defaultPrice: 480, qty: 0 },
+  { id: 'e3', cat: 'electric', name: 'Прокладка электрического кабеля (в штробе)', desc: 'Укладка кабеля ВВГнг-LS (3х1.5, 3х2.5) в штробу с фиксацией перфолентой', unit: 'пог. м', price: 120, defaultPrice: 120, qty: 0 },
+  { id: 'e4', cat: 'electric', name: 'Прокладка кабеля в гофре (по потолку / полу)', desc: 'Затяжка кабеля в ПВХ/ПНД гофру и монтаж на клипсы к перекрытию', unit: 'пог. м', price: 220, defaultPrice: 220, qty: 0 },
+  { id: 'e5', cat: 'electric', name: 'Высверливание гнезда под подрозетник (бетон / монолит)', desc: 'Алмазное бурение коронкой 68–72 мм в монолитной стене', unit: 'шт.', price: 450, defaultPrice: 450, qty: 0 },
+  { id: 'e6', cat: 'electric', name: 'Высверливание гнезда под подрозетник (кирпич / ГКЛ / газобетон)', desc: 'Бурение посадочного места в перегородках', unit: 'шт.', price: 280, defaultPrice: 280, qty: 0 },
+  { id: 'e7', cat: 'electric', name: 'Установка и вмазка подрозетника', desc: 'Выставление по уровню и фиксация пластикового стакана на гипсовый раствор', unit: 'шт.', price: 160, defaultPrice: 160, qty: 0 },
+  { id: 'e8', cat: 'electric', name: 'Установка механизма розетки / выключателя', desc: 'Зачистка концов, подключение клемм и фиксация механизма в подрозетнике с рамкой', unit: 'шт.', price: 350, defaultPrice: 350, qty: 0 },
+  { id: 'e9', cat: 'electric', name: 'Монтаж накладного электрощита (до 24 модулей)', desc: 'Крепление корпуса на стену, ввод кабелей', unit: 'шт.', price: 2800, defaultPrice: 2800, qty: 0 },
+  { id: 'e10', cat: 'electric', name: 'Монтаж встраиваемого электрощита (с нишей, 24-36 модулей)', desc: 'Вырубка ниши в стене, вмазка бокса и закрепление рамы с DIN-рейками', unit: 'шт.', price: 6500, defaultPrice: 6500, qty: 0 },
+  { id: 'e11', cat: 'electric', name: 'Установка автоматического выключателя (1P / однополюсный)', desc: 'Монтаж автомата защиты на DIN-рейку и коммутация проводов', unit: 'шт.', price: 350, defaultPrice: 350, qty: 0 },
+  { id: 'e12', cat: 'electric', name: 'Установка автоматического выключателя (2P / двухполюсный)', desc: 'Двухполюсный автомат защиты (фаза + нейтраль)', unit: 'шт.', price: 480, defaultPrice: 480, qty: 0 },
+  { id: 'e13', cat: 'electric', name: 'Установка автоматического выключателя (3P / трехполюсный)', desc: 'Трехфазный автомат защиты (электроплита, ввод 380 В)', unit: 'шт.', price: 650, defaultPrice: 650, qty: 0 },
+  { id: 'e14', cat: 'electric', name: 'Установка УЗО (устройства защитного отключения, 2P)', desc: 'Монтаж защитного устройства утечки тока (10мА / 30мА) на DIN-рейку', unit: 'шт.', price: 650, defaultPrice: 650, qty: 0 },
+  { id: 'e15', cat: 'electric', name: 'Установка дифференциального автомата (дифавтомат)', desc: 'Комбинированный автомат со встроенной дифференциальной защитой', unit: 'шт.', price: 600, defaultPrice: 600, qty: 0 },
+  { id: 'e16', cat: 'electric', name: 'Установка реле контроля напряжения', desc: 'Устройство защиты квартирной техники от опасных скачков напряжения в сети', unit: 'шт.', price: 1400, defaultPrice: 1400, qty: 0 },
+  { id: 'e17', cat: 'electric', name: 'Монтаж и расключение распределительной коробки', desc: 'Коммутация кабелей сваркой, пайкой или опрессовкой гильзами ГМЛ', unit: 'шт.', price: 1200, defaultPrice: 1200, qty: 0 },
+  { id: 'e18', cat: 'electric', name: 'Монтаж точечного светильника / спота', desc: 'Установка и подключение точечного светильника в готовое отверстие', unit: 'шт.', price: 400, defaultPrice: 400, qty: 0 },
+  { id: 'e19', cat: 'electric', name: 'Монтаж люстры / подвесного светильника', desc: 'Сборка люстры, подвешивание на планку/крюк и фазировка подключения', unit: 'шт.', price: 1600, defaultPrice: 1600, qty: 0 },
+  { id: 'e20', cat: 'electric', name: 'Монтаж светодиодной ленты с профилем', desc: 'Установка алюминиевого профиля, наклейка LED-ленты и подключение блока питания', unit: 'пог. м', price: 550, defaultPrice: 550, qty: 0 },
+  { id: 'e21', cat: 'electric', name: 'Монтаж электрического теплого пола (мат)', desc: 'Раскатка нагревательного мата по полу с фиксацией и выводом термодатчика', unit: 'м²', price: 750, defaultPrice: 750, qty: 0 },
+  { id: 'e22', cat: 'electric', name: 'Установка и подключение терморегулятора теплого пола', desc: 'Монтаж настенного программируемого или механического терморегулятора', unit: 'шт.', price: 1100, defaultPrice: 1100, qty: 0 },
+
+  // 6. САНТЕХНИЧЕСКИЕ РАБОТЫ
+  { id: 's1', cat: 'plumbing', name: 'Точка водоснабжения ХВС/ГВС + канализация (разводка)', desc: 'Прокладка труб от коллектора до сантехприбора (сшитый полиэтилен / полипропилен)', unit: 'точка', price: 2900, defaultPrice: 2900, qty: 0 },
+  { id: 's2', cat: 'plumbing', name: 'Штробление стен под трубы сантехники (кирпич / бетон)', desc: 'Пробивка глубоких штроб под трубы диаметром 20–50 мм', unit: 'пог. м', price: 850, defaultPrice: 850, qty: 0 },
+  { id: 's3', cat: 'plumbing', name: 'Монтаж распределительного коллектора (гребенка ХВС / ГВС)', desc: 'Сборка распределительного узла на кронштейнах с кранами', unit: 'шт.', price: 4200, defaultPrice: 4200, qty: 0 },
+  { id: 's4', cat: 'plumbing', name: 'Установка самопромывного фильтра тонкой очистки с манометром', desc: 'Врезка в систему фильтрации 100 мкм с краном промывки', unit: 'шт.', price: 2200, defaultPrice: 2200, qty: 0 },
+  { id: 's5', cat: 'plumbing', name: 'Установка системы защиты от протечек (Neptun / Аквасторож)', desc: 'Монтаж шаровых кранов с электроприводом, блока управления и проводных датчиков', unit: 'компл.', price: 6500, defaultPrice: 6500, qty: 0 },
+  { id: 's6', cat: 'plumbing', name: 'Установка инсталляции подвесного унитаза', desc: 'Анкерное крепление стальной рамы инсталляции, подвод воды и канализации', unit: 'шт.', price: 5200, defaultPrice: 5200, qty: 0 },
+  { id: 's7', cat: 'plumbing', name: 'Установка унитаза-компакт (напольный)', desc: 'Сборка арматуры бачка, установка на пол, подключение гофры и гибкой подводки', unit: 'шт.', price: 3200, defaultPrice: 3200, qty: 0 },
+  { id: 's8', cat: 'plumbing', name: 'Установка акриловой / стальной ванны', desc: 'Сборка опорного каркаса, выставление ножек по уровню, монтаж сифона-автомата', unit: 'шт.', price: 5000, defaultPrice: 5000, qty: 0 },
+  { id: 's9', cat: 'plumbing', name: 'Установка чугунной ванны', desc: 'Монтаж тяжелой чугунной ванны на опорные клинья с надежным заземлением', unit: 'шт.', price: 7500, defaultPrice: 7500, qty: 0 },
+  { id: 's10', cat: 'plumbing', name: 'Монтаж душевого ограждения / кабины', desc: 'Сборка стеклянных створок, направляющих профилей и антигрибковая герметизация', unit: 'шт.', price: 7500, defaultPrice: 7500, qty: 0 },
+  { id: 's11', cat: 'plumbing', name: 'Установка раковины / умывальника с тумбой', desc: 'Навешивание тумбы, герметизация умывальника и подключение сливного сифона', unit: 'шт.', price: 3800, defaultPrice: 3800, qty: 0 },
+  { id: 's12', cat: 'plumbing', name: 'Установка смесителя на раковину / борт ванны', desc: 'Монтаж смесителя на гибкой подводке с донным клапаном', unit: 'шт.', price: 1650, defaultPrice: 1650, qty: 0 },
+  { id: 's13', cat: 'plumbing', name: 'Установка настенной душевой стойки («тропический душ»)', desc: 'Монтаж термостатического смесителя, вертикальной штанги и верхней лейки', unit: 'шт.', price: 2600, defaultPrice: 2600, qty: 0 },
+  { id: 's14', cat: 'plumbing', name: 'Установка гигиенического душа со смесителем', desc: 'Монтаж встраиваемого или настенного смесителя со шлангом и лейкой', unit: 'шт.', price: 2400, defaultPrice: 2400, qty: 0 },
+  { id: 's15', cat: 'plumbing', name: 'Монтаж водяного полотенцесушителя', desc: 'Подключение к стояку ГВС или байпасу с опрессовкой угловых кранов', unit: 'шт.', price: 3800, defaultPrice: 3800, qty: 0 },
+  { id: 's16', cat: 'plumbing', name: 'Монтаж электрического полотенцесушителя', desc: 'Скрытый или открытый монтаж на стену с подключением к питанию', unit: 'шт.', price: 2600, defaultPrice: 2600, qty: 0 },
+  { id: 's17', cat: 'plumbing', name: 'Установка радиатора отопления', desc: 'Монтаж биметаллического радиатора на кронштейны со сборкой термоклапанов', unit: 'шт.', price: 5200, defaultPrice: 5200, qty: 0 },
+  { id: 's18', cat: 'plumbing', name: 'Установка накопительного водонагревателя (бойлера)', desc: 'Настенный анкерный монтаж, группа безопасности, подключение воды и слива', unit: 'шт.', price: 4500, defaultPrice: 4500, qty: 0 },
+  { id: 's19', cat: 'plumbing', name: 'Подключение стиральной или посудомоечной машины', desc: 'Подключение шланга аквастоп к водорозетке и слива в сифон', unit: 'шт.', price: 1900, defaultPrice: 1900, qty: 0 },
+
+  // 7. ДЕМОНТАЖНЫЕ И ПОДГОТОВИТЕЛЬНЫЕ РАБОТЫ
+  { id: 'd1', cat: 'demo', name: 'Демонтаж легких перегородок (ГКЛ, ПГП, пеноблок)', desc: 'Снос ненесущих межкомнатных перегородок', unit: 'м²', price: 580, defaultPrice: 580, qty: 0 },
+  { id: 'd2', cat: 'demo', name: 'Демонтаж кирпичных стен (в полкирпича)', desc: 'Разборка кирпичных стен толщиной до 12 см', unit: 'м²', price: 950, defaultPrice: 950, qty: 0 },
+  { id: 'd3', cat: 'demo', name: 'Демонтаж старой цементной стяжки (до 50 мм)', desc: 'Сбивка старой растрескавшейся стяжки отбойным молотком', unit: 'м²', price: 680, defaultPrice: 680, qty: 0 },
+  { id: 'd4', cat: 'demo', name: 'Демонтаж старого напольного покрытия (линолеум / ламинат)', desc: 'Удаление старого пола и плинтусов с очисткой основания', unit: 'м²', price: 160, defaultPrice: 160, qty: 0 },
+  { id: 'd5', cat: 'demo', name: 'Демонтаж старой кафельной плитки со стен / пола', desc: 'Сбивка старого кафеля перфоратором с удалением клея', unit: 'м²', price: 400, defaultPrice: 400, qty: 0 },
+  { id: 'd6', cat: 'demo', name: 'Очистка стен от старых обоев (до 2 слоев)', desc: 'Снятие старых обойных полотен шпателем с увлажнением', unit: 'м²', price: 180, defaultPrice: 180, qty: 0 },
+  { id: 'd7', cat: 'demo', name: 'Очистка стен / потолка от масляной краски или побелки', desc: 'Механическая зачистка поверхности до бетонного основания', unit: 'м²', price: 450, defaultPrice: 450, qty: 0 },
+  { id: 'd8', cat: 'demo', name: 'Демонтаж сантехнических приборов (ванна, унитаз, раковина)', desc: 'Аккуратное отключение и вынос старых сантехприборов', unit: 'шт.', price: 1200, defaultPrice: 1200, qty: 0 },
+  { id: 'd9', cat: 'demo', name: 'Сбор, упаковка в мешки и вынос строительного мусора', desc: 'Фасовка строительного боя в полипропиленовые мешки и вынос', unit: 'м³', price: 1200, defaultPrice: 1200, qty: 0 }
+];
+
+// State
+let services = [];
+let activeCategory = 'all';
+let searchQuery = '';
+let showSelectedOnly = false;
+let regionMultiplier = 1.0;
+let discountPercent = 0;
+
+// Load initial services
+function initServices() {
+  try {
+    const saved = localStorage.getItem('remont_services_spb_v2');
+    if (saved) {
+      services = JSON.parse(saved);
+    } else {
+      services = JSON.parse(JSON.stringify(DEFAULT_SERVICES));
+    }
+  } catch (e) {
+    services = JSON.parse(JSON.stringify(DEFAULT_SERVICES));
+  }
+}
+
+function saveServices() {
+  try {
+    localStorage.setItem('remont_services_spb_v2', JSON.stringify(services));
+  } catch (e) {
+    // storage disabled or quota exceeded
+  }
+}
+
+// Toast helper
+function showToast(text) {
+  const toast = document.getElementById('toast');
+  const msg = document.getElementById('toast-message');
+  msg.textContent = text;
+  toast.classList.remove('translate-y-24', 'opacity-0');
+  toast.classList.add('translate-y-0', 'opacity-100');
+  setTimeout(() => {
+    toast.classList.remove('translate-y-0', 'opacity-100');
+    toast.classList.add('translate-y-24', 'opacity-0');
+  }, 2500);
+}
+
+// Number formatter
+function formatCurrency(num) {
+  return Math.round(num).toLocaleString('ru-RU') + ' ₽';
+}
+
+// Render Category Pills
+function renderCategoryPills() {
+  const container = document.getElementById('category-pills');
+  container.innerHTML = '';
+
+  Object.entries(CATEGORIES).forEach(([key, info]) => {
+    const btn = document.createElement('button');
+    const isActive = activeCategory === key;
+    btn.className = `px-3.5 py-1.5 rounded-xl whitespace-nowrap transition flex items-center gap-1.5 select-none ${
+      isActive 
+        ? 'bg-slate-900 text-white font-semibold shadow-xs' 
+        : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
+    }`;
+    btn.innerHTML = `<span>${info.icon}</span><span>${info.label}</span>`;
+    btn.addEventListener('click', () => {
+      activeCategory = key;
+      renderCategoryPills();
+      renderWorksList();
+    });
+    container.appendChild(btn);
+  });
+}
+
+// Filter services based on category, search, and selected-only toggle
+function getFilteredServices() {
+  return services.filter(item => {
+    // Category filter
+    if (activeCategory !== 'all' && item.cat !== activeCategory) {
+      return false;
+    }
+
+    // Selected only filter
+    if (showSelectedOnly && (!item.qty || item.qty <= 0)) {
+      return false;
+    }
+
+    // Search query filter
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase().trim();
+      const nameMatch = item.name.toLowerCase().includes(q);
+      const descMatch = (item.desc || '').toLowerCase().includes(q);
+      const catMatch = (CATEGORIES[item.cat]?.label || '').toLowerCase().includes(q);
+      if (!nameMatch && !descMatch && !catMatch) {
+        return false;
+      }
+    }
+
+    return true;
+  });
+}
+
+// Update Totals and Summary Sidebar
+function updateTotals() {
+  let subtotal = 0;
+  let selectedCount = 0;
+  const categoryTotals = {};
+
+  services.forEach(item => {
+    const q = parseFloat(item.qty) || 0;
+    const p = parseFloat(item.price) || 0;
+    if (q > 0) {
+      const itemTotal = q * p;
+      subtotal += itemTotal;
+      selectedCount++;
+      categoryTotals[item.cat] = (categoryTotals[item.cat] || 0) + itemTotal;
+    }
+  });
+
+  // Adjustments (Region & Discount)
+  let adjustedTotal = subtotal * regionMultiplier;
+  if (discountPercent !== 0) {
+    adjustedTotal = adjustedTotal * (1 - (discountPercent / 100));
+  }
+
+  const diff = adjustedTotal - subtotal;
+
+  // Update Header Widget
+  document.getElementById('header-grand-total').textContent = formatCurrency(adjustedTotal);
+
+  // Update Summary Sidebar
+  document.getElementById('selected-count-badge').textContent = selectedCount;
+  document.getElementById('badge-total-items').textContent = `${selectedCount} позиций`;
+  document.getElementById('subtotal-amount').textContent = formatCurrency(subtotal);
+  document.getElementById('grand-total-amount').textContent = formatCurrency(adjustedTotal);
+
+  // Adjustment row in sidebar
+  const adjRow = document.getElementById('adjustment-row');
+  const adjLabel = document.getElementById('adjustment-label');
+  const adjAmount = document.getElementById('adjustment-amount');
+
+  if (Math.abs(diff) > 0.01) {
+    adjRow.classList.remove('hidden');
+    if (diff > 0) {
+      adjLabel.textContent = 'Наценка (ЛО / условия):';
+      adjAmount.textContent = '+' + formatCurrency(diff);
+      adjAmount.className = 'font-medium text-amber-600';
+    } else {
+      adjLabel.textContent = 'Скидка на объем:';
+      adjAmount.textContent = '-' + formatCurrency(Math.abs(diff));
+      adjAmount.className = 'font-medium text-emerald-600';
+    }
+  } else {
+    adjRow.classList.add('hidden');
+  }
+
+  // Render category breakdown in sidebar
+  const breakdownEl = document.getElementById('summary-breakdown');
+  breakdownEl.innerHTML = '';
+
+  if (selectedCount === 0) {
+    breakdownEl.innerHTML = '<div class="text-slate-400 py-2 text-center">Позиции пока не выбраны.<br>Введите объемы напротив нужных работ.</div>';
+  } else {
+    Object.entries(categoryTotals).forEach(([catKey, sum]) => {
+      if (sum > 0) {
+        const catInfo = CATEGORIES[catKey] || { label: 'Другое', icon: '🔹' };
+        const pct = subtotal > 0 ? Math.round((sum / subtotal) * 100) : 0;
+        const row = document.createElement('div');
+        row.className = 'space-y-1';
+        row.innerHTML = `
+          <div class="flex justify-between items-center">
+            <span class="flex items-center gap-1.5 font-medium text-slate-700">
+              <span>${catInfo.icon}</span> ${catInfo.label}
+            </span>
+            <span class="font-semibold text-slate-900">${formatCurrency(sum)} <span class="text-slate-400 text-[10px]">(${pct}%)</span></span>
+          </div>
+          <div class="w-full bg-slate-100 rounded-full h-1.5 overflow-hidden">
+            <div class="bg-teal-500 h-1.5 rounded-full" style="width: ${pct}%"></div>
+          </div>
+        `;
+        breakdownEl.appendChild(row);
+      }
+    });
+  }
+
+  // Print elements
+  const printTotal = document.getElementById('print-total');
+  if (printTotal) printTotal.textContent = formatCurrency(adjustedTotal);
+  const printDate = document.getElementById('print-date');
+  if (printDate) printDate.textContent = new Date().toLocaleDateString('ru-RU');
+}
+
+// Render Main Works Cards
+function renderWorksList() {
+  const container = document.getElementById('works-list-container');
+  const emptyState = document.getElementById('empty-state');
+  const filtered = getFilteredServices();
+
+  document.getElementById('visible-items-count').textContent = filtered.length;
+
+  if (filtered.length === 0) {
+    container.innerHTML = '';
+    emptyState.classList.remove('hidden');
+    return;
+  }
+
+  emptyState.classList.add('hidden');
+  container.innerHTML = '';
+
+  filtered.forEach(item => {
+    const qty = parseFloat(item.qty) || 0;
+    const price = parseFloat(item.price) || 0;
+    const lineTotal = qty * price;
+    const isSelected = qty > 0;
+    const isCustom = item.isCustom || false;
+    const isPriceModified = item.defaultPrice && item.price !== item.defaultPrice;
+
+    const card = document.createElement('div');
+    card.className = `p-4 sm:p-4.5 rounded-2xl border transition-all duration-200 ${
+      isSelected 
+        ? 'bg-white border-teal-500/50 shadow-sm ring-1 ring-teal-500/20' 
+        : 'bg-white border-slate-200/80 hover:border-slate-300'
+    }`;
+
+    const catInfo = CATEGORIES[item.cat] || { label: 'Работа', icon: '🔹' };
+
+    // Presets based on unit
+    let presetButtonsHtml = '';
+    if (item.unit === 'м²') {
+      presetButtonsHtml = `
+        <div class="flex items-center gap-1 mt-1 text-[11px] text-slate-500">
+          <span class="text-[10px] text-slate-400">Быстро:</span>
+          <button type="button" class="btn-preset px-1.5 py-0.5 rounded bg-slate-100 hover:bg-slate-200 text-slate-700 transition" data-id="${item.id}" data-val="10">+10</button>
+          <button type="button" class="btn-preset px-1.5 py-0.5 rounded bg-slate-100 hover:bg-slate-200 text-slate-700 transition" data-id="${item.id}" data-val="25">+25</button>
+          <button type="button" class="btn-preset px-1.5 py-0.5 rounded bg-slate-100 hover:bg-slate-200 text-slate-700 transition" data-id="${item.id}" data-val="50">+50</button>
+          <button type="button" class="btn-preset px-1.5 py-0.5 rounded bg-slate-100 hover:bg-slate-200 text-slate-700 transition" data-id="${item.id}" data-val="100">+100</button>
+        </div>
+      `;
+    } else if (item.unit === 'пог. м') {
+      presetButtonsHtml = `
+        <div class="flex items-center gap-1 mt-1 text-[11px] text-slate-500">
+          <span class="text-[10px] text-slate-400">Быстро:</span>
+          <button type="button" class="btn-preset px-1.5 py-0.5 rounded bg-slate-100 hover:bg-slate-200 text-slate-700 transition" data-id="${item.id}" data-val="2">+2</button>
+          <button type="button" class="btn-preset px-1.5 py-0.5 rounded bg-slate-100 hover:bg-slate-200 text-slate-700 transition" data-id="${item.id}" data-val="5">+5</button>
+          <button type="button" class="btn-preset px-1.5 py-0.5 rounded bg-slate-100 hover:bg-slate-200 text-slate-700 transition" data-id="${item.id}" data-val="10">+10</button>
+          <button type="button" class="btn-preset px-1.5 py-0.5 rounded bg-slate-100 hover:bg-slate-200 text-slate-700 transition" data-id="${item.id}" data-val="20">+20</button>
+        </div>
+      `;
+    } else {
+      presetButtonsHtml = `
+        <div class="flex items-center gap-1 mt-1 text-[11px] text-slate-500">
+          <span class="text-[10px] text-slate-400">Быстро:</span>
+          <button type="button" class="btn-preset px-1.5 py-0.5 rounded bg-slate-100 hover:bg-slate-200 text-slate-700 transition" data-id="${item.id}" data-val="1">+1</button>
+          <button type="button" class="btn-preset px-1.5 py-0.5 rounded bg-slate-100 hover:bg-slate-200 text-slate-700 transition" data-id="${item.id}" data-val="2">+2</button>
+          <button type="button" class="btn-preset px-1.5 py-0.5 rounded bg-slate-100 hover:bg-slate-200 text-slate-700 transition" data-id="${item.id}" data-val="5">+5</button>
+          <button type="button" class="btn-preset px-1.5 py-0.5 rounded bg-slate-100 hover:bg-slate-200 text-slate-700 transition" data-id="${item.id}" data-val="10">+10</button>
+        </div>
+      `;
+    }
+
+    card.innerHTML = `
+      <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        
+        <!-- Item Info -->
+        <div class="flex-1 min-w-0 pr-2">
+          <div class="flex items-center gap-2 mb-1 flex-wrap">
+            <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-medium bg-slate-100 text-slate-600">
+              <span>${catInfo.icon}</span> ${catInfo.label}
+            </span>
+            <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[11px] font-semibold bg-slate-100 text-slate-700">
+              ${item.unit}
+            </span>
+            ${isCustom ? '<span class="px-1.5 py-0.5 rounded text-[10px] font-medium bg-amber-100 text-amber-800">Пользовательская</span>' : ''}
+          </div>
+
+          <h4 class="text-sm font-semibold text-slate-900 leading-snug">${item.name}</h4>
+          ${item.desc ? `<p class="text-xs text-slate-500 mt-0.5 leading-relaxed">${item.desc}</p>` : ''}
+
+          <!-- Unit Price (Editable) -->
+          <div class="mt-2 flex items-center gap-2 text-xs">
+            <span class="text-slate-500">Цена за ${item.unit}:</span>
+            <div class="inline-flex items-center gap-1 bg-slate-50 px-2 py-1 rounded-lg border border-slate-200/80">
+              <input 
+                type="number" 
+                class="input-price w-16 text-xs font-bold text-slate-800 bg-transparent text-right focus:outline-none" 
+                value="${item.price}" 
+                min="0"
+                data-id="${item.id}"
+              >
+              <span class="text-slate-600 font-semibold">₽</span>
+            </div>
+            ${isPriceModified ? `
+              <button type="button" class="btn-reset-price text-[10px] text-teal-600 hover:text-teal-800 underline" data-id="${item.id}" title="Сбросить к средней цене (${item.defaultPrice} ₽)">
+                Сброс (${item.defaultPrice} ₽)
+              </button>
+            ` : ''}
+            ${isCustom ? `
+              <button type="button" class="btn-delete-custom text-[11px] text-rose-500 hover:text-rose-700 ml-2" data-id="${item.id}" title="Удалить работу">
+                Удалить
+              </button>
+            ` : ''}
+          </div>
+        </div>
+
+        <!-- Quantity & Line Total Section -->
+        <div class="flex flex-col sm:items-end w-full sm:w-auto shrink-0 border-t sm:border-t-0 pt-3 sm:pt-0 border-slate-100">
+          <div class="flex items-center justify-between sm:justify-end gap-3 w-full">
+            <div class="text-xs font-medium text-slate-500 sm:hidden">Объем:</div>
+
+            <!-- Stepper Input -->
+            <div class="flex items-center border border-slate-200 rounded-xl overflow-hidden bg-slate-50 shadow-2xs">
+              <button type="button" class="btn-step-minus px-3 py-2 text-slate-600 hover:bg-slate-200 active:bg-slate-300 transition text-sm font-bold" data-id="${item.id}">−</button>
+              <input 
+                type="number" 
+                class="input-qty w-20 py-1.5 text-center text-sm font-bold bg-white text-slate-900 border-x border-slate-200 focus:outline-none focus:ring-1 focus:ring-teal-500" 
+                value="${item.qty === 0 ? '' : item.qty}" 
+                placeholder="0" 
+                min="0" 
+                step="any"
+                data-id="${item.id}"
+              >
+              <button type="button" class="btn-step-plus px-3 py-2 text-slate-600 hover:bg-slate-200 active:bg-slate-300 transition text-sm font-bold" data-id="${item.id}">+</button>
+            </div>
+
+            <!-- Line Total -->
+            <div class="w-28 text-right">
+              <div class="text-xs text-slate-400">Сумма:</div>
+              <div class="text-sm font-extrabold ${isSelected ? 'text-teal-700' : 'text-slate-400'}">
+                ${formatCurrency(lineTotal)}
+              </div>
+            </div>
+          </div>
+
+          <!-- Quick Presets -->
+          ${presetButtonsHtml}
+        </div>
+
+      </div>
+    `;
+
+    container.appendChild(card);
+  });
+
+  // Attach event listeners to all newly rendered elements
+  attachCardListeners();
+}
+
+function attachCardListeners() {
+  // Qty input change
+  document.querySelectorAll('.input-qty').forEach(inp => {
+    inp.addEventListener('input', (e) => {
+      const id = e.target.dataset.id;
+      const val = parseFloat(e.target.value) || 0;
+      updateItemQty(id, Math.max(0, val), false);
+    });
+  });
+
+  // Price input change
+  document.querySelectorAll('.input-price').forEach(inp => {
+    inp.addEventListener('change', (e) => {
+      const id = e.target.dataset.id;
+      const val = parseFloat(e.target.value) || 0;
+      updateItemPrice(id, Math.max(0, val));
+    });
+  });
+
+  // Plus / Minus buttons
+  document.querySelectorAll('.btn-step-plus').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const id = btn.dataset.id;
+      const item = services.find(s => s.id === id);
+      if (item) {
+        const step = (item.unit === 'шт.' || item.unit === 'точка' || item.unit === 'компл.') ? 1 : 5;
+        updateItemQty(id, (parseFloat(item.qty) || 0) + step, true);
+      }
+    });
+  });
+
+  document.querySelectorAll('.btn-step-minus').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const id = btn.dataset.id;
+      const item = services.find(s => s.id === id);
+      if (item) {
+        const step = (item.unit === 'шт.' || item.unit === 'точка' || item.unit === 'компл.') ? 1 : 5;
+        const current = parseFloat(item.qty) || 0;
+        updateItemQty(id, Math.max(0, current - step), true);
+      }
+    });
+  });
+
+  // Preset buttons (+10, +25, etc.)
+  document.querySelectorAll('.btn-preset').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const id = btn.dataset.id;
+      const addVal = parseFloat(btn.dataset.val) || 0;
+      const item = services.find(s => s.id === id);
+      if (item) {
+        const current = parseFloat(item.qty) || 0;
+        updateItemQty(id, current + addVal, true);
+      }
+    });
+  });
+
+  // Reset price
+  document.querySelectorAll('.btn-reset-price').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const id = btn.dataset.id;
+      const item = services.find(s => s.id === id);
+      if (item && item.defaultPrice) {
+        item.price = item.defaultPrice;
+        saveServices();
+        updateTotals();
+        renderWorksList();
+        showToast(`Цена сброшена к стандартной: ${item.defaultPrice} ₽`);
+      }
+    });
+  });
+
+  // Delete custom work
+  document.querySelectorAll('.btn-delete-custom').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const id = btn.dataset.id;
+      services = services.filter(s => s.id !== id);
+      saveServices();
+      updateTotals();
+      renderWorksList();
+      showToast('Пользовательская работа удалена');
+    });
+  });
+}
+
+function updateItemQty(id, newQty, shouldReRender) {
+  const item = services.find(s => s.id === id);
+  if (item) {
+    item.qty = newQty;
+    saveServices();
+    updateTotals();
+    if (shouldReRender) {
+      renderWorksList();
+    } else {
+      // Update only card line total without tearing down DOM focus
+      const card = document.querySelector(`.input-qty[data-id="${id}"]`)?.closest('.rounded-2xl');
+      if (card) {
+        const totalEl = card.querySelector('.w-28 .text-sm');
+        const lineTotal = (parseFloat(item.qty) || 0) * (parseFloat(item.price) || 0);
+        if (totalEl) {
+          totalEl.textContent = formatCurrency(lineTotal);
+          if (item.qty > 0) {
+            totalEl.className = 'text-sm font-extrabold text-teal-700';
+            card.classList.add('border-teal-500/50', 'ring-1', 'ring-teal-500/20');
+          } else {
+            totalEl.className = 'text-sm font-extrabold text-slate-400';
+            card.classList.remove('border-teal-500/50', 'ring-1', 'ring-teal-500/20');
+          }
+        }
+      }
+    }
+  }
+}
+
+function updateItemPrice(id, newPrice) {
+  const item = services.find(s => s.id === id);
+  if (item) {
+    item.price = newPrice;
+    saveServices();
+    updateTotals();
+    renderWorksList();
+    showToast(`Цена обновлена: ${newPrice} ₽`);
+  }
+}
+
+// Load Realistic 1-Room Apartment Example (as requested in user prompt!)
+function loadExampleProject() {
+  // Reset all first
+  services.forEach(s => s.qty = 0);
+
+  const exampleMap = {
+    'w1': 120, // грунтовка стен 120 м2
+    'w4': 50,  // шпаклевка стен под обои 50 м2
+    'w5': 50,  // шпаклевка стен под покраску 50 м2
+    'w8': 0,
+    'w9': 50,  // покраска стен в 2 слоя 50 м2 (пример из запроса!)
+    'w10': 50, // обои 50 м2
+    'c1': 40,  // грунтовка потолка 40 м2
+    'c3': 40,  // шпаклевка потолка 40 м2
+    'c5': 40,  // покраска потолка в 2 слоя 40 м2
+    'o1': 4,   // установка откосов 4 пог. м (пример из запроса!)
+    'o5': 4,   // покраска откосов в 2 слоя 4 пог. м
+    'o7': 3,   // подоконник 3 пог. м
+    'f1': 40,  // грунтовка пола 40 м2
+    'f3': 40,  // наливной пол 40 м2
+    'f5': 30,  // ламинат 30 м2
+    'f9': 10,  // плитка пол 10 м2
+    'f13': 35, // плинтус 35 пог. м
+    'e1': 35,  // штробление 35 пог. м
+    'e3': 60,  // прокладка кабеля 60 пог. м (пример из запроса!)
+    'e4': 40,  // прокладка в гофре 40 пог. м
+    'e5': 15,  // подрозетники в бетоне 15 шт
+    'e7': 15,  // вмазка подрозетников 15 шт
+    'e8': 15,  // установка розеток/выключателей 15 шт
+    'e10': 1,  // установка электрощита 1 шт (пример из запроса!)
+    'e11': 10, // установка автоматов 10 шт (пример из запроса!)
+    'e14': 2,  // установка УЗО 2 шт (пример из запроса!)
+    's1': 4,   // 4 точки водоснабжения
+    's6': 1,   // инсталляция 1 шт
+    's8': 1,   // ванна 1 шт
+    's11': 1,  // раковина с тумбой 1 шт
+    's12': 2,  // смесители 2 шт
+  };
+
+  Object.entries(exampleMap).forEach(([id, q]) => {
+    const item = services.find(s => s.id === id);
+    if (item) item.qty = q;
+  });
+
+  saveServices();
+  updateTotals();
+  renderWorksList();
+  showToast('Загружен готовый пример сметы ремонта (1-комн. квартира)');
+}
+
+// Reset All Quantities
+function resetAll() {
+  services.forEach(s => s.qty = 0);
+  saveServices();
+  updateTotals();
+  renderWorksList();
+  showToast('Все введенные объемы сброшены в 0');
+}
+
+// Export to Excel-compatible CSV with UTF-8 BOM
+function exportToCSV() {
+  const selected = services.filter(s => (parseFloat(s.qty) || 0) > 0);
+  if (selected.length === 0) {
+    showToast('В смете пока нет выбранных позиций');
+    return;
+  }
+
+  let csvContent = '\uFEFF'; // UTF-8 BOM for Excel Cyrillic support
+  csvContent += 'Категория;Наименование работ;Ед. изм.;Цена за ед. (руб.);Объем;Итого (руб.)\r\n';
+
+  let total = 0;
+  selected.forEach(s => {
+    const q = parseFloat(s.qty) || 0;
+    const p = parseFloat(s.price) || 0;
+    const sum = q * p;
+    total += sum;
+    const cat = CATEGORIES[s.cat]?.label || s.cat;
+    const name = '"' + s.name.replace(/"/g, '""') + '"';
+    csvContent += cat + ';' + name + ';' + s.unit + ';' + p + ';' + q + ';' + sum + '\r\n';
+  });
+
+  csvContent += ';;;;;\r\n';
+  csvContent += 'ИТОГО БЕЗ КОЭФФИЦИЕНТОВ;;;;;' + total + '\r\n';
+  
+  const adjusted = total * regionMultiplier * (1 - (discountPercent / 100));
+  csvContent += 'ИТОГО С УЧЕТОМ КОЭФФИЦИЕНТОВ (СПб/ЛО);;;;;' + Math.round(adjusted) + '\r\n';
+
+  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.setAttribute('href', url);
+  link.setAttribute('download', 'Smeta_Remont_SPb_' + new Date().toISOString().slice(0, 10) + '.csv');
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+  showToast('Файл сметы успешно скачан (.CSV)');
+}
+
+// Copy Summary Text to Clipboard
+function copySummaryText() {
+  const selected = services.filter(s => (parseFloat(s.qty) || 0) > 0);
+  if (selected.length === 0) {
+    showToast('Смета пуста — введите объемы работ');
+    return;
+  }
+
+  let text = 'СМЕТА НА РЕМОНТНЫЕ РАБОТЫ (СПб и ЛО 2026)\nДата: ' + new Date().toLocaleDateString('ru-RU') + '\n';
+  text += '----------------------------------------\n';
+
+  let total = 0;
+  selected.forEach((s, idx) => {
+    const q = parseFloat(s.qty) || 0;
+    const p = parseFloat(s.price) || 0;
+    const sum = q * p;
+    total += sum;
+    text += (idx + 1) + '. ' + s.name + ' — ' + q + ' ' + s.unit + ' × ' + p + ' ₽ = ' + formatCurrency(sum) + '\n';
+  });
+
+  text += '----------------------------------------\n';
+  text += 'Сумма по работам: ' + formatCurrency(total) + '\n';
+  const adjusted = total * regionMultiplier * (1 - (discountPercent / 100));
+  text += 'ИТОГО с коэффициентом: ' + formatCurrency(adjusted) + '\n';
+
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(text).then(() => {
+      showToast('Текст сметы скопирован в буфер обмена!');
+    }).catch(() => {
+      fallbackCopyText(text);
+    });
+  } else {
+    fallbackCopyText(text);
+  }
+}
+
+function fallbackCopyText(text) {
+  const ta = document.createElement('textarea');
+  ta.value = text;
+  ta.style.position = 'fixed';
+  ta.style.left = '-9999px';
+  document.body.appendChild(ta);
+  ta.select();
+  try {
+    document.execCommand('copy');
+    showToast('Текст сметы скопирован в буфер обмена!');
+  } catch (err) {
+    showToast('Не удалось скопировать текст');
+  }
+  document.body.removeChild(ta);
+}
+
+// Prepare and Trigger Print View
+function prepareAndPrint() {
+  const selected = services.filter(s => (parseFloat(s.qty) || 0) > 0);
+  const printBody = document.getElementById('print-table-body');
+  printBody.innerHTML = '';
+
+  if (selected.length === 0) {
+    showToast('Сначала выберите работы и введите их объемы');
+    return;
+  }
+
+  selected.forEach((item, index) => {
+    const q = parseFloat(item.qty) || 0;
+    const p = parseFloat(item.price) || 0;
+    const sum = q * p;
+    const cat = CATEGORIES[item.cat]?.label || item.cat;
+
+    const row = document.createElement('tr');
+    row.innerHTML = `
+      <td class="py-1.5">${index + 1}</td>
+      <td class="py-1.5 font-medium text-slate-600">${cat}</td>
+      <td class="py-1.5 font-semibold text-slate-900">${item.name}</td>
+      <td class="py-1.5 text-center">${item.unit}</td>
+      <td class="py-1.5 text-right">${p.toLocaleString('ru-RU')} ₽</td>
+      <td class="py-1.5 text-center font-bold">${q}</td>
+      <td class="py-1.5 text-right font-bold text-slate-900">${sum.toLocaleString('ru-RU')} ₽</td>
+    `;
+    printBody.appendChild(row);
+  });
+
+  window.print();
+}
+
+// Setup Event Listeners
+function setupApp() {
+  initServices();
+  renderCategoryPills();
+  updateTotals();
+  renderWorksList();
+
+  // Search input
+  const searchInput = document.getElementById('search-input');
+  const clearSearchBtn = document.getElementById('btn-clear-search');
+
+  searchInput.addEventListener('input', (e) => {
+    searchQuery = e.target.value;
+    if (searchQuery.trim()) {
+      clearSearchBtn.classList.remove('hidden');
+    } else {
+      clearSearchBtn.classList.add('hidden');
+    }
+    renderWorksList();
+  });
+
+  clearSearchBtn.addEventListener('click', () => {
+    searchInput.value = '';
+    searchQuery = '';
+    clearSearchBtn.classList.add('hidden');
+    renderWorksList();
+  });
+
+  // Filter only selected checkbox
+  const selectedOnlyCheck = document.getElementById('filter-selected-only');
+  selectedOnlyCheck.addEventListener('change', (e) => {
+    showSelectedOnly = e.target.checked;
+    renderWorksList();
+  });
+
+  // Reset filters button in empty state
+  document.getElementById('btn-reset-filters').addEventListener('click', () => {
+    searchQuery = '';
+    searchInput.value = '';
+    clearSearchBtn.classList.add('hidden');
+    activeCategory = 'all';
+    showSelectedOnly = false;
+    selectedOnlyCheck.checked = false;
+    renderCategoryPills();
+    renderWorksList();
+  });
+
+  // Example project button
+  document.getElementById('btn-example').addEventListener('click', loadExampleProject);
+
+  // Reset all quantities button
+  document.getElementById('btn-reset-all').addEventListener('click', () => {
+    const count = services.filter(s => (parseFloat(s.qty) || 0) > 0).length;
+    if (count === 0) {
+      showToast('Смета уже пуста');
+      return;
+    }
+    resetAll();
+  });
+
+  // Region & discount selectors
+  const regionSelect = document.getElementById('region-select');
+  regionSelect.addEventListener('change', (e) => {
+    regionMultiplier = parseFloat(e.target.value) || 1.0;
+    updateTotals();
+  });
+
+  const discountSelect = document.getElementById('discount-select');
+  discountSelect.addEventListener('change', (e) => {
+    discountPercent = parseFloat(e.target.value) || 0;
+    updateTotals();
+  });
+
+  // Action buttons
+  document.getElementById('btn-export-csv').addEventListener('click', exportToCSV);
+  document.getElementById('btn-copy-summary').addEventListener('click', copySummaryText);
+  document.getElementById('btn-print-estimate').addEventListener('click', prepareAndPrint);
+
+  // Modal custom work handling
+  const modal = document.getElementById('custom-modal');
+  const btnOpenModal = document.getElementById('btn-open-custom-modal');
+  const btnCloseModal = document.getElementById('btn-close-modal');
+  const btnCancelModal = document.getElementById('btn-cancel-modal');
+  const customForm = document.getElementById('custom-work-form');
+
+  btnOpenModal.addEventListener('click', () => {
+    customForm.reset();
+    modal.classList.remove('hidden');
+  });
+
+  const closeModal = () => modal.classList.add('hidden');
+  btnCloseModal.addEventListener('click', closeModal);
+  btnCancelModal.addEventListener('click', closeModal);
+
+  customForm.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const name = document.getElementById('custom-name').value.trim();
+    const cat = document.getElementById('custom-category').value;
+    const unit = document.getElementById('custom-unit').value;
+    const price = parseFloat(document.getElementById('custom-price').value) || 0;
+    const qty = parseFloat(document.getElementById('custom-qty').value) || 1;
+    const desc = document.getElementById('custom-desc').value.trim();
+
+    if (!name) return;
+
+    const newId = 'custom_' + Date.now();
+    const newWork = {
+      id: newId,
+      cat: cat,
+      name: name,
+      desc: desc,
+      unit: unit,
+      price: price,
+      defaultPrice: price,
+      qty: qty,
+      isCustom: true
+    };
+
+    services.unshift(newWork);
+    saveServices();
+    closeModal();
+    activeCategory = 'all';
+    renderCategoryPills();
+    updateTotals();
+    renderWorksList();
+    showToast('Пользовательская работа добавлена в смету!');
+  });
+}
+
+// Initialize when DOM ready
+window.addEventListener('DOMContentLoaded', setupApp);
+
+  </script>
+</body>
+</html>
